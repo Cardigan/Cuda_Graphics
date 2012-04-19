@@ -29,6 +29,13 @@ typedef struct Vector3
   Vector3() {}
 } Vector3;
 
+typedef struct Color
+{
+  float r;
+  float g;
+  float b;
+} Color;
+
 //data structure to store triangle - 
 //note that v1, v2, and v3 are indexes into the vertex array
 typedef struct Tri{
@@ -36,7 +43,7 @@ typedef struct Tri{
   int v2;
   int v3;
   Vector3 normal;
-  Vector3 color;
+  Color c1, c2, c3;
   Tri(int in_v1, int in_v2, int in_v3) : v1(in_v1), v2(in_v2), v3(in_v3), normal(0, 1, 0){}
   Tri() : normal(0, 1, 0) {}
 } Tri;
@@ -162,7 +169,8 @@ void readLine(char* str) {
            exit(EXIT_FAILURE);
 #endif
         }
-        t->color.x = r; t->color.x = g; t->color.x = b;
+        t->c1.r = r; t->c1.g = g; t->c1.b = b;
+
         cout << "set color to: " << r << " " << g << " " << b << endl;
       }
     }
