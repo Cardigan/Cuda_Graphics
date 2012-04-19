@@ -10,7 +10,7 @@
 #include <string>
 #include <cstring>
 #include <cstdio>
-// #include <GL/glut.h>
+#include <GL/glut.h>
 #include <assert.h>
 #include <map>
 
