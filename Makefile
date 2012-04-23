@@ -1,4 +1,4 @@
 all:
-	g++ *.cpp  -o rasterize
+	g++ Image.cpp MeshParser_release3.cpp  -o rasterize
 clean:
 	rm rasterize

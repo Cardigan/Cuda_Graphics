@@ -8,9 +8,11 @@
 #include <string>
 #include <cstring>
 #include <cstdio>
-#include <GL/glut.h>
+//#include <GL/glut.h>
 #include <assert.h>
 #include <map>
+
+#include "Image.h"
 
 using namespace std;
 
@@ -48,5 +50,5 @@ typedef struct Tri{
   Tri() : normal(0, 1, 0) {}
 } Tri;
 
-void ColorVertices(vector<Tri *> Triangles, vector<Vector3 *> Vertices);
+//void ColorVertices(vector<Tri *> Triangles, vector<Vector3 *> Vertices);
 
