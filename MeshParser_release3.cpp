@@ -56,11 +56,11 @@ double p2wx(double x, int width) {
   return (((width - window_size) / 2) * x) + ((width-window_size)/2);
 }
 
-void Convert_to_Window(vector<Vector3 *> & Vertices, int width, int height) {
+void Convert_to_Window(vector<Vector3 *> & Vertices, int width, int height, int scale, int x_offset, int y_offset) {
 
   for (int i = 0; i < Vertices.size(); i++) {
-    (*(Vertices[i])).x = p2wx( (*(Vertices[i])).x*10, width) + 60;
-    (*(Vertices[i])).y = p2wy( ((*(Vertices[i])).y*10), height) - 200;
+    (*(Vertices[i])).x = p2wx( (*(Vertices[i])).x*scale, width) + x_offset;
+    (*(Vertices[i])).y = p2wy( ((*(Vertices[i])).y*scale), height) + y_offset;
   }
 
 }
@@ -120,9 +120,6 @@ void RasterizeTriangles(vector<Tri *> & Triangles, vector<Vector3 *> & Vertices,
          if (miny < 0) { miny = 0; }
          int maxy = max_val(Vertices[Triangles[i]->v1]->y, Vertices[Triangles[i]->v2]->y, Vertices[Triangles[i]->v3]->y);
          if (maxy + 1 > width) { maxy = width-1; }
-
-         //printf("Minx is %d. Maxx is %d\n", minx, maxx);
-
 
          for (int y = miny; y < maxy+1; y++) {
             for (int x = minx; x < maxx+1; x++) {
@@ -184,9 +181,9 @@ void RasterizeTriangles(vector<Tri *> & Triangles, vector<Vector3 *> & Vertices,
 
 void ColorVertices1(vector<Tri *> & Triangles, vector<Vector3 *> & Vertices) {
 
-  Vector3 light_pos = Vector3(0.5, 0.5, 0.5);
-  double material = 0.8;
-  Color light = Color(0.8, 0.8, 0.8);
+  Vector3 light_pos = Vector3(0.2, 0.2, 0.2);
+  double material = 0.9;
+  Color light = Color(0.9, 0.2, 0.2);
 
   int size = Triangles.size();
   for (int i = 0; i < size; i++) {
@@ -211,9 +208,7 @@ void ColorVertices1(vector<Tri *> & Triangles, vector<Vector3 *> & Vertices) {
                            Vertices[i1]->z - Vertices[i3]->z
                            );
 
-    /*Vector3 v2 = Vector3((*(Vertices[i1])).x - (*(Vertices[i3])).x,
-                         (*(Vertices[i1])).y - (*(Vertices[i3])).y,
-                          (*(Vertices[i1])).z - (*(Vertices[i3])).z);*/
+
 
     Vector3 cross = Vector3();
     cross.x = v1.y*v2.z - v1.z*v2.y;
@@ -416,14 +411,16 @@ int main( int argc, char** argv ) {
   //make sure a file to read is specified
   if (argc > 1) {
     cout << "file " << argv[1] << endl;
+   
+    
+
     //read-in the mesh file specified
     ReadFile(argv[1]);
-    printFirstThree();
+    //printFirstThree();
     ColorVertices1(Triangles, Vertices);
     printf("Done Coloring...\n"); 
-    Convert_to_Window(Vertices, 400, 400);
-
-    RasterizeTriangles(Triangles, Vertices, 400, 400);
+    Convert_to_Window(Vertices, 2000, 2000, 8, 60, -1000);
+    RasterizeTriangles(Triangles, Vertices, 2000, 2000);
    }
   return 0;
 }
