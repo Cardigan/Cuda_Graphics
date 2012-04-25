@@ -19,6 +19,35 @@ using namespace std;
 #define FLT_MIN 1.1754E-38F
 #define FLT_MAX 1.1754E+38F
 
+//used for cuda variation and fpixel
+#define INUSE 1
+#define NOT_INUSE 0
+#define THREADSPERBLOCK 1024
+
+// ========================
+// = debuging expressions =
+// ========================
+#define dprintd(expr) printf(#expr " = %d, ", expr)
+#define dprintc(expr) printf(#expr " = %c, ", expr)
+#define dprints(expr) printf(#expr " = %s, ", expr)
+#define dprintx(expr) printf(#expr " = %x, ", expr)
+#define dprintf(expr) printf(#expr " = %f, ", expr)
+#define dprintld(expr) printf(#expr " = %ld, ", expr)
+#define dprintNL  printf(" \n")
+
+#define paste(front, back) front ## back
+#define max(A,B) ((A)>(B)? (A) : (B))
+
+#define debugbar printf("# \n");
+#define debugbar1 printf("$ \n");
+#define debugbar2 printf("* \n");
+
+
+
+
+
+
+
 //very simple data structure to store 3d points
 typedef struct Vector3
 {
@@ -49,6 +78,21 @@ typedef struct Tri{
   Tri(int in_v1, int in_v2, int in_v3) : v1(in_v1), v2(in_v2), v3(in_v3), normal(0, 1, 0){}
   Tri() : normal(0, 1, 0) {}
 } Tri;
+
+
+//pixel info struct
+//x and y location, color depth and in use semiphore
+typedef struct cudaPixel{
+	int x;
+	int y;
+	float depth;
+	double r;
+	double g;
+	double b;
+	char available;
+		
+}cudaPixel;
+
 
 //void ColorVertices(vector<Tri *> Triangles, vector<Vector3 *> Vertices);
 
