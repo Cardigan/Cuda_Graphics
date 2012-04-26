@@ -416,14 +416,30 @@ void printFirstThree() {
 //cuda fucntion call
 __global__ void cuRaster(cudaTri* pcudaTri, cudaVector3* pcudaVector3, cudaPixel * cuda_pixel_buffer,int width, int height, int numTriangles){
 
+
+//ddprintf("-");	
+//dprintd(blockIdx.x);
+
 	int i;
 	//simple test
-/*	if(blockIdx.x == 0 && threadIdx.x ==0){
+/*	if(blockIdx.x == 23 && threadIdx.x ==23){
+		dprintd(blockIdx.x);
+		dprintd(threadIdx.x);
 	  printf("first vertex: %f %f %f \n",pcudaVector3[0].x, pcudaVector3[0].y, pcudaVector3[0].z );
 	  printf("first face: %d %d %d \n", pcudaTri[0].v1,  pcudaTri[0].v2,  pcudaTri[0].v3 ); 
 
-	}*/
+	}
+*/
+	int index;
+	for(i=0;i<((width*height)/numTriangles + 1 );i++){
+		index = (numTriangles*i) + (blockIdx.x * THREADSPERBLOCK )+ threadIdx.x;
+		if(index<(width*height)){
+			cuda_pixel_buffer[index].depth = -1000;
+			printf("x");
+		}
+	}
 
+	__syncthreads();
 
 	//bounding the threads
 	int lim = numTriangles/THREADSPERBLOCK  + ((numTriangles % THREADSPERBLOCK )==0 ? 0 :1) ;
@@ -512,7 +528,7 @@ if (maxy + 1 > width) { maxy = width-1; }
                         //printf("Coloring %d, %d.\n", x, y);
                         //img.pixel(x,y, col);
                         // img_buffer[x*width+y] = col;
-
+						//printf("coloring a pixel\n");
 						cuda_pixel_buffer[x*width+y].r = col.r;
 						cuda_pixel_buffer[x*width+y].g = col.g;
 						cuda_pixel_buffer[x*width+y].b = col.b;
@@ -588,33 +604,39 @@ void CudaRasterizeTriangles(vector<Tri *> & Triangles, vector<Vector3 *> & Verti
 	}
 
 
-   //mallocing space on card
-   //mallocing cudabuffer
-   cudaPixel* d_cuda_pixel_buffer;
-   cudaMalloc((void**)&d_cuda_pixel_buffer, width*height*sizeof(cudaPixel));
-   cudaMemcpy( d_cuda_pixel_buffer, cuda_pixel_buffer, width*height*sizeof(cudaPixel),cudaMemcpyHostToDevice ); 
+	//mallocing space on card
+	//mallocing cudabuffer
+	cudaPixel* d_cuda_pixel_buffer;
+	cudaMalloc((void**)&d_cuda_pixel_buffer, width*height*sizeof(cudaPixel));
+	ERRORCHECK;
+	cudaMemcpy( d_cuda_pixel_buffer, cuda_pixel_buffer, width*height*sizeof(cudaPixel),cudaMemcpyHostToDevice );
+	ERRORCHECK 
 	//mallocing trianglebuffer
-   cudaTri* d_cudaTri;
-   cudaMalloc((void**)&d_cudaTri,Triangles.size()*sizeof(cudaTri));
-   cudaMemcpy( d_cudaTri, pcudaTri,Triangles.size()*sizeof(cudaTri) ,cudaMemcpyHostToDevice ); 
+	cudaTri* d_cudaTri;
+	cudaMalloc((void**)&d_cudaTri,Triangles.size()*sizeof(cudaTri));
+	ERRORCHECK
+	cudaMemcpy( d_cudaTri, pcudaTri,Triangles.size()*sizeof(cudaTri) ,cudaMemcpyHostToDevice ); 
+	ERRORCHECK	
 	//mallocing vertices buffer
 	cudaVector3* d_cudaVector3;
 	cudaMalloc((void**)&d_cudaVector3,Vertices.size()*sizeof(cudaVector3));
-    cudaMemcpy( d_cudaVector3, pcudaVector3 ,Vertices.size()*sizeof(cudaVector3) ,cudaMemcpyHostToDevice ); 
-
+	ERRORCHECK
+	cudaMemcpy( d_cudaVector3, pcudaVector3 ,Vertices.size()*sizeof(cudaVector3) ,cudaMemcpyHostToDevice ); 
+	ERRORCHECK
 
 
 	//defining the size of the array size
 	int blocksize = ((Triangles.size())/THREADSPERBLOCK) + ( ((Triangles.size())%THREADSPERBLOCK)==0 ? 0 : 1);
 	printf("Before the Kernel call\n");
-
+dprintd(blocksize);
+dprintd(THREADSPERBLOCK);
 	//calling the cuda code
 	cuRaster<<<blocksize, THREADSPERBLOCK>>>(d_cudaTri, d_cudaVector3, d_cuda_pixel_buffer, width, height,Triangles.size() );
-
+    ERRORCHECK
 	printf("Before the memcpy call\n");
 	//copying th memory back from the kernel 
     cudaMemcpy(cuda_pixel_buffer, d_cuda_pixel_buffer, width*height*sizeof(cudaPixel),cudaMemcpyDeviceToHost);
-	
+ERRORCHECK	
 
 	//copy the cuda pixel buffer into the image buffer
 	printf("returned from kernel ok\n");

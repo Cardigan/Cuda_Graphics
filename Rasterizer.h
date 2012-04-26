@@ -89,7 +89,6 @@ typedef struct cudaPixel{
 	double r;
 	double g;
 	double b;
-	char available;
 		
 }cudaPixel;
 

@@ -25,7 +25,7 @@ typedef struct color_struct {
 class Image {
 public:
     Image(int width, int height);
-    ~Image();
+   ~Image();
 
     // if scale_color is true, the output targa will have its color space scaled
     // to the global max, otherwise it will be clamped at 1.0
