@@ -431,19 +431,85 @@ __global__ void cuRaster(cudaTri* pcudaTri, cudaVector3* pcudaVector3, cudaPixel
 	}
 */
 	int index;
-	for(i=0;i<((width*height)/numTriangles + 1 );i++){
+	/*for(i=0;i<((width*height)/numTriangles + 1 );i++){
 		index = (numTriangles*i) + (blockIdx.x * THREADSPERBLOCK )+ threadIdx.x;
 		if(index<(width*height)){
 			cuda_pixel_buffer[index].depth = -1000;
-			printf("x");
+			//printf("x");
 		}
 	}
 
-	__syncthreads();
+	__syncthreads();*/
 
 	//bounding the threads
 	int lim = numTriangles/THREADSPERBLOCK  + ((numTriangles % THREADSPERBLOCK )==0 ? 0 :1) ;
-	if(blockIdx.x < lim){
+
+  if (blockIdx.x < lim) {
+    i = blockIdx.x*THREADSPERBLOCK + threadIdx.x;
+
+
+    // Check if normal is facing towards you
+    if (pcudaTri[i].normal.z < 0) {
+
+    }
+    else {
+
+      // Get minimum and maximum x
+   		// returns the smaller of 3 numbers (x < y ? (x < z ? x : z) : (z < y ? z : y))
+	   	int minx = (pcudaVector3[pcudaTri[i].v1].x < pcudaVector3[pcudaTri[i].v2].x ? (pcudaVector3[pcudaTri[i].v1].x < pcudaVector3[pcudaTri[i].v3].x ? pcudaVector3[pcudaTri[i].v1].x : pcudaVector3[pcudaTri[i].v3].x) : (pcudaVector3[pcudaTri[i].v3].x < pcudaVector3[pcudaTri[i].v2].x ? pcudaVector3[pcudaTri[i].v3].x : pcudaVector3[pcudaTri[i].v2].x));
+
+      // returns the larger of 3 numbers (x > y ? (x > z ? x : z) : (z > y ? z : y))
+		  int maxx = (pcudaVector3[pcudaTri[i].v1].x > pcudaVector3[pcudaTri[i].v2].x ? (pcudaVector3[pcudaTri[i].v1].x > pcudaVector3[pcudaTri[i].v3].x ? pcudaVector3[pcudaTri[i].v1].x : pcudaVector3[pcudaTri[i].v3].x) : (pcudaVector3[pcudaTri[i].v3].x > pcudaVector3[pcudaTri[i].v2].x ? pcudaVector3[pcudaTri[i].v3].x : pcudaVector3[pcudaTri[i].v2].x));
+
+  		int miny = pcudaVector3[pcudaTri[i].v1].y  < pcudaVector3[pcudaTri[i].v2].y  ? (pcudaVector3[pcudaTri[i].v1].y  < pcudaVector3[pcudaTri[i].v3].y ? pcudaVector3[pcudaTri[i].v1].y  : pcudaVector3[pcudaTri[i].v3].y) : (pcudaVector3[pcudaTri[i].v3].y < pcudaVector3[pcudaTri[i].v2].y  ? pcudaVector3[pcudaTri[i].v3].y : pcudaVector3[pcudaTri[i].v2].y );
+
+   		int maxy = pcudaVector3[pcudaTri[i].v1].y > pcudaVector3[pcudaTri[i].v2].y  ? (pcudaVector3[pcudaTri[i].v1].y > pcudaVector3[pcudaTri[i].v3].y ? pcudaVector3[pcudaTri[i].v1].y : pcudaVector3[pcudaTri[i].v3].y) : (pcudaVector3[pcudaTri[i].v3].y > pcudaVector3[pcudaTri[i].v2].y  ? pcudaVector3[pcudaTri[i].v3].y : pcudaVector3[pcudaTri[i].v2].y );
+
+
+
+      for (int y = miny; y < maxy+1; y++) {
+        for (int x = minx; x < maxx+1; x++) {
+
+
+            double A = (pcudaVector3[pcudaTri[i].v2].x - pcudaVector3[pcudaTri[i].v1].x) * (pcudaVector3[pcudaTri[i].v3].y - pcudaVector3[pcudaTri[i].v1].y)  ;
+            A -= (pcudaVector3[pcudaTri[i].v3].x - pcudaVector3[pcudaTri[i].v1].x) * (pcudaVector3[pcudaTri[i].v2].y - pcudaVector3[pcudaTri[i].v1].y)   ;
+
+            double beta =  (pcudaVector3[pcudaTri[i].v1].x - pcudaVector3[pcudaTri[i].v3].x) * (y - pcudaVector3[pcudaTri[i].v3].y)  ;
+            beta -=  (x - pcudaVector3[pcudaTri[i].v3].x) * (pcudaVector3[pcudaTri[i].v1].y - pcudaVector3[pcudaTri[i].v3].y)  ;
+            beta /= A;
+
+            double gamma =  (pcudaVector3[pcudaTri[i].v2].x - pcudaVector3[pcudaTri[i].v1].x);
+            gamma *= (y - pcudaVector3[pcudaTri[i].v1].y);
+            gamma -= (x - pcudaVector3[pcudaTri[i].v1].x) * (pcudaVector3[pcudaTri[i].v2].y - pcudaVector3[pcudaTri[i].v1].y)  ;
+            gamma /= A;  
+            
+          
+
+            double alpha = 1.0;
+            alpha -= beta;
+            alpha -= gamma;
+            
+            //int check = alpha > 0.0;
+            int check = (alpha > -0.0) && (alpha < 1.01);
+            check = check &&  (gamma > -0.00) && (gamma < 1.01);
+            check = check && (beta > -0.0) && (beta < 1.01);
+            if (check) {
+
+              cuda_pixel_buffer[x*width+y].r = alpha * (pcudaTri[i].c1.r) + beta * ( pcudaTri[i].c2.r ) + gamma * ( pcudaTri[i].c3.r  );
+              cuda_pixel_buffer[x*width+y].g = alpha * (pcudaTri[i].c1.g) + beta * ( pcudaTri[i].c2.g ) + gamma * ( pcudaTri[i].c3.g  );
+              cuda_pixel_buffer[x*width+y].b = alpha * (pcudaTri[i].c1.b) + beta * ( pcudaTri[i].c2.b ) + gamma * ( pcudaTri[i].c3.b  );
+
+            }
+        }
+      }
+
+
+
+    }
+
+  }
+
+	/*if(blockIdx.x < lim){
 		if((threadIdx.x) < (THREADSPERBLOCK)){
 			i = blockIdx.x*THREADSPERBLOCK + threadIdx.x;
 			//magical stuff will happens here
@@ -564,7 +630,7 @@ if (maxy + 1 > width) { maxy = width-1; }
 
 
 		}
-	}
+	}*/
 }
 
 
@@ -582,6 +648,11 @@ void CudaRasterizeTriangles(vector<Tri *> & Triangles, vector<Vector3 *> & Verti
 		pcudaTri[i].v1 = Triangles[i]->v1;
 		pcudaTri[i].v2 = Triangles[i]->v2; 
 		pcudaTri[i].v3 = Triangles[i]->v3; 
+    pcudaTri[i].normal = Triangles[i]->normal;
+    pcudaTri[i].c1 = Triangles[i]->c1;
+    pcudaTri[i].c2 = Triangles[i]->c2;
+    pcudaTri[i].c3 = Triangles[i]->c3;
+
 	}
 	
 	for(int i=0; i<Vertices.size(); i++){
