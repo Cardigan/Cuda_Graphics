@@ -44,10 +44,6 @@ using namespace std;
 
 
 
-
-
-
-
 //very simple data structure to store 3d points
 typedef struct Vector3
 {

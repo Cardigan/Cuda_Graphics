@@ -449,58 +449,66 @@ __global__ void cuRaster(cudaTri* pcudaTri, cudaVector3* pcudaVector3, cudaPixel
 
 
     // Check if normal is facing towards you
-    if (pcudaTri[i].normal.z < 0) {
+    if (pcudaTri[i].normal.z < 0 || i > numTriangles) {
 
     }
     else {
 
+      for (int row = 0; row < 2; row++) {
+          __syncthreads();
+          pcudaVector3[pcudaTri[i].v1].x = pcudaVector3[pcudaTri[i].v1].x + (100);
+          pcudaVector3[pcudaTri[i].v2].x = pcudaVector3[pcudaTri[i].v2].x + (100);
+          pcudaVector3[pcudaTri[i].v3].x = pcudaVector3[pcudaTri[i].v3].x + (100);
+  
       // Get minimum and maximum x
    		// returns the smaller of 3 numbers (x < y ? (x < z ? x : z) : (z < y ? z : y))
 	   	int minx = (pcudaVector3[pcudaTri[i].v1].x < pcudaVector3[pcudaTri[i].v2].x ? (pcudaVector3[pcudaTri[i].v1].x < pcudaVector3[pcudaTri[i].v3].x ? pcudaVector3[pcudaTri[i].v1].x : pcudaVector3[pcudaTri[i].v3].x) : (pcudaVector3[pcudaTri[i].v3].x < pcudaVector3[pcudaTri[i].v2].x ? pcudaVector3[pcudaTri[i].v3].x : pcudaVector3[pcudaTri[i].v2].x));
-
+      if (minx < 0) { minx = 0; }     
       // returns the larger of 3 numbers (x > y ? (x > z ? x : z) : (z > y ? z : y))
 		  int maxx = (pcudaVector3[pcudaTri[i].v1].x > pcudaVector3[pcudaTri[i].v2].x ? (pcudaVector3[pcudaTri[i].v1].x > pcudaVector3[pcudaTri[i].v3].x ? pcudaVector3[pcudaTri[i].v1].x : pcudaVector3[pcudaTri[i].v3].x) : (pcudaVector3[pcudaTri[i].v3].x > pcudaVector3[pcudaTri[i].v2].x ? pcudaVector3[pcudaTri[i].v3].x : pcudaVector3[pcudaTri[i].v2].x));
-
+  		if (maxx + 1 > width ) { maxx = width-1; }
   		int miny = pcudaVector3[pcudaTri[i].v1].y  < pcudaVector3[pcudaTri[i].v2].y  ? (pcudaVector3[pcudaTri[i].v1].y  < pcudaVector3[pcudaTri[i].v3].y ? pcudaVector3[pcudaTri[i].v1].y  : pcudaVector3[pcudaTri[i].v3].y) : (pcudaVector3[pcudaTri[i].v3].y < pcudaVector3[pcudaTri[i].v2].y  ? pcudaVector3[pcudaTri[i].v3].y : pcudaVector3[pcudaTri[i].v2].y );
-
+  		if (miny < 0) { miny = 0; }
    		int maxy = pcudaVector3[pcudaTri[i].v1].y > pcudaVector3[pcudaTri[i].v2].y  ? (pcudaVector3[pcudaTri[i].v1].y > pcudaVector3[pcudaTri[i].v3].y ? pcudaVector3[pcudaTri[i].v1].y : pcudaVector3[pcudaTri[i].v3].y) : (pcudaVector3[pcudaTri[i].v3].y > pcudaVector3[pcudaTri[i].v2].y  ? pcudaVector3[pcudaTri[i].v3].y : pcudaVector3[pcudaTri[i].v2].y );
+      if (maxy + 1 > width) { maxy = width-1; }
 
 
 
-      for (int y = miny; y < maxy+1; y++) {
-        for (int x = minx; x < maxx+1; x++) {
+        //for (int col = 0; col < 5; col++) {
+          for (int y = miny; y < maxy+1; y++) {
+            for (int x = minx; x < maxx+1; x++) {
 
 
-            double A = (pcudaVector3[pcudaTri[i].v2].x - pcudaVector3[pcudaTri[i].v1].x) * (pcudaVector3[pcudaTri[i].v3].y - pcudaVector3[pcudaTri[i].v1].y)  ;
-            A -= (pcudaVector3[pcudaTri[i].v3].x - pcudaVector3[pcudaTri[i].v1].x) * (pcudaVector3[pcudaTri[i].v2].y - pcudaVector3[pcudaTri[i].v1].y)   ;
+                double A = (pcudaVector3[pcudaTri[i].v2].x - pcudaVector3[pcudaTri[i].v1].x) * (pcudaVector3[pcudaTri[i].v3].y - pcudaVector3[pcudaTri[i].v1].y)  ;
+                A -= (pcudaVector3[pcudaTri[i].v3].x - pcudaVector3[pcudaTri[i].v1].x) * (pcudaVector3[pcudaTri[i].v2].y - pcudaVector3[pcudaTri[i].v1].y)   ;
 
-            double beta =  (pcudaVector3[pcudaTri[i].v1].x - pcudaVector3[pcudaTri[i].v3].x) * (y - pcudaVector3[pcudaTri[i].v3].y)  ;
-            beta -=  (x - pcudaVector3[pcudaTri[i].v3].x) * (pcudaVector3[pcudaTri[i].v1].y - pcudaVector3[pcudaTri[i].v3].y)  ;
-            beta /= A;
+                double beta =  (pcudaVector3[pcudaTri[i].v1].x - pcudaVector3[pcudaTri[i].v3].x) * (y - pcudaVector3[pcudaTri[i].v3].y)  ;
+                beta -=  (x - pcudaVector3[pcudaTri[i].v3].x) * (pcudaVector3[pcudaTri[i].v1].y - pcudaVector3[pcudaTri[i].v3].y)  ;
+                beta /= A;
 
-            double gamma =  (pcudaVector3[pcudaTri[i].v2].x - pcudaVector3[pcudaTri[i].v1].x);
-            gamma *= (y - pcudaVector3[pcudaTri[i].v1].y);
-            gamma -= (x - pcudaVector3[pcudaTri[i].v1].x) * (pcudaVector3[pcudaTri[i].v2].y - pcudaVector3[pcudaTri[i].v1].y)  ;
-            gamma /= A;  
-            
-          
+                double gamma =  (pcudaVector3[pcudaTri[i].v2].x - pcudaVector3[pcudaTri[i].v1].x);
+                gamma *= (y - pcudaVector3[pcudaTri[i].v1].y);
+                gamma -= (x - pcudaVector3[pcudaTri[i].v1].x) * (pcudaVector3[pcudaTri[i].v2].y - pcudaVector3[pcudaTri[i].v1].y)  ;
+                gamma /= A;  
+                
+                double alpha = 1.0;
+                alpha -= beta;
+                alpha -= gamma;
+                
+                //int check = alpha > 0.0;
+                int check = (alpha > -0.0) && (alpha < 1.01);
+                check = check &&  (gamma > -0.00) && (gamma < 1.01);
+                check = check && (beta > -0.0) && (beta < 1.01);
+                if (check) {
 
-            double alpha = 1.0;
-            alpha -= beta;
-            alpha -= gamma;
-            
-            //int check = alpha > 0.0;
-            int check = (alpha > -0.0) && (alpha < 1.01);
-            check = check &&  (gamma > -0.00) && (gamma < 1.01);
-            check = check && (beta > -0.0) && (beta < 1.01);
-            if (check) {
+                  cuda_pixel_buffer[x*width+y].r = alpha * (pcudaTri[i].c1.r) + beta * ( pcudaTri[i].c2.r ) + gamma * ( pcudaTri[i].c3.r  );
+                  cuda_pixel_buffer[x*width+y].g = alpha * (pcudaTri[i].c1.g) + beta * ( pcudaTri[i].c2.g ) + gamma * ( pcudaTri[i].c3.g  );
+                  cuda_pixel_buffer[x*width+y].b = alpha * (pcudaTri[i].c1.b) + beta * ( pcudaTri[i].c2.b ) + gamma * ( pcudaTri[i].c3.b  );
 
-              cuda_pixel_buffer[x*width+y].r = alpha * (pcudaTri[i].c1.r) + beta * ( pcudaTri[i].c2.r ) + gamma * ( pcudaTri[i].c3.r  );
-              cuda_pixel_buffer[x*width+y].g = alpha * (pcudaTri[i].c1.g) + beta * ( pcudaTri[i].c2.g ) + gamma * ( pcudaTri[i].c3.g  );
-              cuda_pixel_buffer[x*width+y].b = alpha * (pcudaTri[i].c1.b) + beta * ( pcudaTri[i].c2.b ) + gamma * ( pcudaTri[i].c3.b  );
-
+                }
             }
-        }
+          }
+        //}
       }
 
 
@@ -635,7 +643,6 @@ if (maxy + 1 > width) { maxy = width-1; }
 
 
 
-
 void CudaRasterizeTriangles(vector<Tri *> & Triangles, vector<Vector3 *> & Vertices, int width, int height){
 
 	//malloc array space for cuda triangle vector
@@ -762,12 +769,11 @@ int main( int argc, char** argv ) {
     //printFirstThree();
     ColorVertices1(Triangles, Vertices);
     printf("Done Coloring...\n"); 
-    Convert_to_Window(Vertices, 2000, 2000, 8, 60, -1000);
-	
-	
+    Convert_to_Window(Vertices, 2000, 2000, 4, -750, 500);
+		
     //RasterizeTriangles(Triangles, Vertices, 2000, 2000);
     
-	//cuda version of rasterize triangle
+  	//cuda version of rasterize triangle
     CudaRasterizeTriangles(Triangles, Vertices, 2000, 2000);
   
  
