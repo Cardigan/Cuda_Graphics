@@ -93,6 +93,23 @@ typedef struct cudaPixel{
 		
 }cudaPixel;
 
+//simpel struct to hold each triangle vetex pointer
+typedef struct cudaTri{
+	int v1;
+	int v2;
+	int v3;
+
+}cudaTri;
+
+//cuda version of a very simple data structure to store 3d points
+typedef struct cudaVector3
+{
+  float x;
+  float y;
+  float z;
+} cudaVector3;
+
+
 
 //void ColorVertices(vector<Tri *> Triangles, vector<Vector3 *> Vertices);
 

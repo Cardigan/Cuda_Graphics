@@ -2,11 +2,11 @@
 //Hh code modified by ZJW for csc 471
 #include "Rasterizer.h"
 #define ERRORCHECK   error = cudaGetLastError();\
-	if(error != cudaSuccess){\
-	printf("CUDA Error: %s\n", cudaGetErrorString(error));\
-			\
-	return;\
-	}\
+					if(error != cudaSuccess){\
+					printf("CUDA Error: %s\n", cudaGetErrorString(error));\
+							\
+					return;\
+					}\
 
 cudaError_t error;
 
@@ -414,23 +414,27 @@ void printFirstThree() {
 
 
 //cuda fucntion call
-__global__ void cuRaster( cudaPixel * cuda_pixel_buffer,int width, int height){
+__global__ void cuRaster(cudaTri* pcudaTri, cudaVector3* pcudaVector3, cudaPixel * cuda_pixel_buffer,int width, int height){
 
 	int index;
+//simple test
+if(blockIdx.x == 0 && threadIdx.x ==0){
+  printf("first vertex: %f %f %f \n",pcudaVector3[0].x, pcudaVector3[0].y, pcudaVector3[0].z );
+  printf("first face: %d %d %d \n", pcudaTri[0].v1,  pcudaTri[0].v2,  pcudaTri[0].v3 ); 
+
+}
+
+
 	//bounding the threads
 	int lim = ((width*height)/THREADSPERBLOCK);
 	if(blockIdx.x < lim){
 		if((threadIdx.x) < (THREADSPERBLOCK)){
 
+				index = blockIdx.x*THREADSPERBLOCK + threadIdx.x;
 			//magical stuff will happens here
-			if(threadIdx.x%100 == 0){
+			if(index%500 == 0){
 				
-				/*dprintd(blockIdx.x);
-				dprintd(blockIdx.y);
-				dprintd(threadIdx.x);
-				dprintd(threadIdx.y);
-				dprintd(threadIdx.z);
-				dprintNL;*/
+
 				index = blockIdx.x*THREADSPERBLOCK + threadIdx.x;
 				cuda_pixel_buffer[index].r = 0;
 				
@@ -438,8 +442,6 @@ __global__ void cuRaster( cudaPixel * cuda_pixel_buffer,int width, int height){
 				cuda_pixel_buffer[index].g = 0;
 				}
 		}
-	}else{
-		return;
 	}
 }
 
@@ -449,7 +451,31 @@ __global__ void cuRaster( cudaPixel * cuda_pixel_buffer,int width, int height){
 void CudaRasterizeTriangles(vector<Tri *> & Triangles, vector<Vector3 *> & Vertices, int width, int height){
 
 
-   color_t* img_buffer = (color_t*)malloc(sizeof(color_t)*width*height);
+
+	 printFirstThree();
+
+ 
+	//malloc array space for cuda triangle vector
+	cudaTri* pcudaTri = (cudaTri*)malloc(Triangles.size()*sizeof(cudaTri));
+	//mallocing space for vertices array
+	cudaVector3* pcudaVector3 = (cudaVector3*)malloc(Vertices.size()*sizeof(cudaVector3));
+	
+	//place the data into the new arrays
+	for(int i=0; i<Triangles.size();i++ ){
+		pcudaTri[i].v1 = Triangles[i]->v1;
+		pcudaTri[i].v2 = Triangles[i]->v2; 
+		pcudaTri[i].v3 = Triangles[i]->v3; 
+	}
+	
+	for(int i=0; i<Vertices.size(); i++){
+		pcudaVector3[i].x =  Vertices[i]->x; 
+		pcudaVector3[i].y =  Vertices[i]->y; 
+		pcudaVector3[i].z =  Vertices[i]->z; 
+	}
+
+  
+
+	color_t* img_buffer = (color_t*)malloc(sizeof(color_t)*width*height);
    Image img(width, height);
 
    //cuda pixel buffer, will load into shared memory space
@@ -462,13 +488,19 @@ void CudaRasterizeTriangles(vector<Tri *> & Triangles, vector<Vector3 *> & Verti
 
 
    //mallocing space on card
+   //mallocing cudabuffer
    cudaPixel* d_cuda_pixel_buffer;
    cudaMalloc((void**)&d_cuda_pixel_buffer, width*height*sizeof(cudaPixel));
-	printf("e1\n");
-	ERRORCHECK;
-   cudaMemcpy( d_cuda_pixel_buffer, cuda_pixel_buffer, width*height*sizeof(cudaPixel),cudaMemcpyHostToDevice );
-	printf("e2\n");
-	ERRORCHECK;
+   cudaMemcpy( d_cuda_pixel_buffer, cuda_pixel_buffer, width*height*sizeof(cudaPixel),cudaMemcpyHostToDevice ); 
+	//mallocing trianglebuffer
+   cudaTri* d_cudaTri;
+   cudaMalloc((void**)&d_cudaTri,Triangles.size()*sizeof(cudaTri));
+   cudaMemcpy( d_cudaTri, pcudaTri,Triangles.size()*sizeof(cudaTri) ,cudaMemcpyHostToDevice ); 
+	//mallocing vertices buffer
+	cudaVector3* d_cudaVector3;
+	cudaMalloc((void**)&d_cudaVector3,Vertices.size()*sizeof(cudaVector3));
+    cudaMemcpy( d_cudaVector3, pcudaVector3 ,Vertices.size()*sizeof(cudaVector3) ,cudaMemcpyHostToDevice ); 
+
 
 
 	//defining the size of the array size
@@ -476,62 +508,48 @@ void CudaRasterizeTriangles(vector<Tri *> & Triangles, vector<Vector3 *> & Verti
 	printf("Before the Kernel call\n");
 
 	//calling the cuda code
-	cuRaster<<<blocksize, THREADSPERBLOCK>>>(d_cuda_pixel_buffer, width, height);
-	printf("e3\n");
-	ERRORCHECK;
+	cuRaster<<<blocksize, THREADSPERBLOCK>>>(d_cudaTri, d_cudaVector3, d_cuda_pixel_buffer, width, height);
 
 	printf("Before the memcpy call\n");
 	//copying th memory back from the kernel 
     cudaMemcpy(cuda_pixel_buffer, d_cuda_pixel_buffer, width*height*sizeof(cudaPixel),cudaMemcpyDeviceToHost);
-	printf("e4\n");
-	ERRORCHECK;
 	
 
 	//copy the cuda pixel buffer into the image buffer
 	printf("returned from kernel ok\n");
 	color_t col;
 	int index=0;
-	printf("index = %d\n",index);
-	dprintd(index);
 	col.r = 1; col.g = 0; col.b=0;
-   for(int i = 0; i<width; i++){
+   /* for(i = 0; i<width; i++){                     // this area was combined into the next for loop
    		for(int j=0; j<height;j++){
-		//	dprintd(i);
-		//	dprintd(j);
-		//	dprintf(cuda_pixel_buffer[index].r);
-		//	 dprintf(cuda_pixel_buffer[index].b);
-		//	 dprintf(cuda_pixel_buffer[index].g);
-
 			index = i*width+j;
-		//	 dprintd(index);
-		//	dprintNL;
-			
-
 			col.r = cuda_pixel_buffer[index].r;
 			col.g = cuda_pixel_buffer[index].g;
 			col.b = cuda_pixel_buffer[index].b;
-			if(col.b > 0)printf("Sofar so good!\n");
 			img_buffer[index] = col;
 		}
-   }
+   }*/
    
-  
-
-
-
-
-
-   
-   
+	printf("done copying from the cudabuffer\n");
+//copy cuda_pixles to buffer 
    for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
-         img.pixel(x,y, img_buffer[x*width+y]);
+		index = x*width+y;
+		col.r = cuda_pixel_buffer[index].r;
+		col.g = cuda_pixel_buffer[index].g;
+		col.b = cuda_pixel_buffer[index].b;
+		img_buffer[index] = col;
+        img.pixel(x,y, img_buffer[x*width+y]);
       }
    }
 
    img.WriteTga("awesome.tga", true);
    free(img_buffer);
+	free(pcudaVector3);
+	free(pcudaTri);
    cudaFree(d_cuda_pixel_buffer);
+   cudaFree(d_cudaVector3);
+
 }
 
 
