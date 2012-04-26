@@ -98,7 +98,8 @@ typedef struct cudaTri{
 	int v1;
 	int v2;
 	int v3;
-
+	Vector3 normal;
+    Color c1, c2, c3;
 }cudaTri;
 
 //cuda version of a very simple data structure to store 3d points

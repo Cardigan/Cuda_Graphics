@@ -414,9 +414,9 @@ void printFirstThree() {
 
 
 //cuda fucntion call
-__global__ void cuRaster(cudaTri* pcudaTri, cudaVector3* pcudaVector3, cudaPixel * cuda_pixel_buffer,int width, int height){
+__global__ void cuRaster(cudaTri* pcudaTri, cudaVector3* pcudaVector3, cudaPixel * cuda_pixel_buffer,int width, int height, int numTriangles){
 
-	int index;
+	int i;
 	//simple test
 /*	if(blockIdx.x == 0 && threadIdx.x ==0){
 	  printf("first vertex: %f %f %f \n",pcudaVector3[0].x, pcudaVector3[0].y, pcudaVector3[0].z );
@@ -426,12 +426,119 @@ __global__ void cuRaster(cudaTri* pcudaTri, cudaVector3* pcudaVector3, cudaPixel
 
 
 	//bounding the threads
-	int lim = ((width*height)/THREADSPERBLOCK);
+	int lim = numTriangles/THREADSPERBLOCK  + ((numTriangles % THREADSPERBLOCK )==0 ? 0 :1) ;
 	if(blockIdx.x < lim){
 		if((threadIdx.x) < (THREADSPERBLOCK)){
-			index = blockIdx.x*THREADSPERBLOCK + threadIdx.x;
+			i = blockIdx.x*THREADSPERBLOCK + threadIdx.x;
 			//magical stuff will happens here
 			
+
+
+
+
+
+
+
+		int t = pcudaVector3[pcudaTri[i].v1].x;
+
+      if (pcudaTri[i].normal.z < 0) {
+
+      }
+      else {
+         // Get minimum and maximum x
+         //int minx = min_val(pcudaVector3[pcudaTri[i].v1].x, pcudaVector3[pcudaTri[i].v2].x, pcudaVector3[pcudaTri[i].v3].x);
+		// returns the smaller of 3 numbers (x < y ? (x < z ? x : z) : (z < y ? z : y))
+		int minx = (pcudaVector3[pcudaTri[i].v1].x < pcudaVector3[pcudaTri[i].v2].x ? (pcudaVector3[pcudaTri[i].v1].x < pcudaVector3[pcudaTri[i].v3].x ? pcudaVector3[pcudaTri[i].v1].x : pcudaVector3[pcudaTri[i].v3].x) : (pcudaVector3[pcudaTri[i].v3].x < pcudaVector3[pcudaTri[i].v2].x ? pcudaVector3[pcudaTri[i].v3].x : pcudaVector3[pcudaTri[i].v2].x));
+	
+
+         if (minx < 0) { minx = 0; }
+         //int maxx = max_val(pcudaVector3[pcudaTri[i].v1].x, pcudaVector3[pcudaTri[i].v2].x, pcudaVector3[pcudaTri[i].v3].x);
+        // returns the larger of 3 numbers (x > y ? (x > z ? x : z) : (z > y ? z : y))
+		int maxx = (pcudaVector3[pcudaTri[i].v1].x > pcudaVector3[pcudaTri[i].v2].x ? (pcudaVector3[pcudaTri[i].v1].x > pcudaVector3[pcudaTri[i].v3].x ? pcudaVector3[pcudaTri[i].v1].x : pcudaVector3[pcudaTri[i].v3].x) : (pcudaVector3[pcudaTri[i].v3].x > pcudaVector3[pcudaTri[i].v2].x ? pcudaVector3[pcudaTri[i].v3].x : pcudaVector3[pcudaTri[i].v2].x));
+ 
+
+		if (maxx + 1 > width ) { maxx = width-1; }
+
+         // Get minimum and maximum y
+         //int miny = min_val(pcudaVector3[pcudaTri[i].v1].y, pcudaVector3[pcudaTri[i].v2].y, pcudaVector3[pcudaTri[i].v3].y);
+         // returns the smaller of 3 numbers (x < y ? (x < z ? x : z) : (z < y ? z : y))
+		int miny = pcudaVector3[pcudaTri[i].v1].y  < pcudaVector3[pcudaTri[i].v2].y  ? (pcudaVector3[pcudaTri[i].v1].y  < pcudaVector3[pcudaTri[i].v3].y ? pcudaVector3[pcudaTri[i].v1].y  : pcudaVector3[pcudaTri[i].v3].y) : (pcudaVector3[pcudaTri[i].v3].y < pcudaVector3[pcudaTri[i].v2].y  ? pcudaVector3[pcudaTri[i].v3].y : pcudaVector3[pcudaTri[i].v2].y );
+
+
+		if (miny < 0) { miny = 0; }
+         //int maxy = max_val(pcudaVector3[pcudaTri[i].v1].y, pcudaVector3[pcudaTri[i].v2].y, pcudaVector3[pcudaTri[i].v3].y);
+		// returns the larger of 3 numbers (x > y ? (x > z ? x : z) : (z > y ? z : y))
+		int maxy = pcudaVector3[pcudaTri[i].v1].y > pcudaVector3[pcudaTri[i].v2].y  ? (pcudaVector3[pcudaTri[i].v1].y > pcudaVector3[pcudaTri[i].v3].y ? pcudaVector3[pcudaTri[i].v1].y : pcudaVector3[pcudaTri[i].v3].y) : (pcudaVector3[pcudaTri[i].v3].y > pcudaVector3[pcudaTri[i].v2].y  ? pcudaVector3[pcudaTri[i].v3].y : pcudaVector3[pcudaTri[i].v2].y );
+         
+
+if (maxy + 1 > width) { maxy = width-1; }
+
+		// iterates through the triangle pixel, then calculates the alpha beta and gamma
+         for (int y = miny; y < maxy+1; y++) {
+            for (int x = minx; x < maxx+1; x++) {
+               // Calculate alpha, beta, gamma, 
+               
+               double A = (pcudaVector3[pcudaTri[i].v2].x - pcudaVector3[pcudaTri[i].v1].x) * (pcudaVector3[pcudaTri[i].v3].y - pcudaVector3[pcudaTri[i].v1].y)  ;
+               A -= (pcudaVector3[pcudaTri[i].v3].x - pcudaVector3[pcudaTri[i].v1].x) * (pcudaVector3[pcudaTri[i].v2].y - pcudaVector3[pcudaTri[i].v1].y)   ;
+
+               double beta =  (pcudaVector3[pcudaTri[i].v1].x - pcudaVector3[pcudaTri[i].v3].x) * (y - pcudaVector3[pcudaTri[i].v3].y)  ;
+               beta -=  (x - pcudaVector3[pcudaTri[i].v3].x) * (pcudaVector3[pcudaTri[i].v1].y - pcudaVector3[pcudaTri[i].v3].y)  ;
+               beta /= A;
+
+               double gamma =  (pcudaVector3[pcudaTri[i].v2].x - pcudaVector3[pcudaTri[i].v1].x) * (y - pcudaVector3[pcudaTri[i].v1].y)  ;
+               gamma -= (x - pcudaVector3[pcudaTri[i].v1].x) * (pcudaVector3[pcudaTri[i].v2].y - pcudaVector3[pcudaTri[i].v1].y)  ;
+               gamma /= A;  
+
+               double alpha = 1.0 - beta - gamma;
+
+               // Is the pixel inside the triangle? then color the pixel
+               if ((alpha > -0.0) && (alpha < 1.01) && (gamma > -0.00) && (gamma < 1.01) && (beta > -0.0) && (beta < 1.01) ) {
+                  // Color
+                  color_t col;
+                  col.r = alpha * (pcudaTri[i].c1.r) + beta * ( pcudaTri[i].c2.r ) + gamma * ( pcudaTri[i].c3.r  );
+                  col.g = alpha * (pcudaTri[i].c1.g) + beta * ( pcudaTri[i].c2.g ) + gamma * ( pcudaTri[i].c3.g  );
+                  col.b = alpha * (pcudaTri[i].c1.b) + beta * ( pcudaTri[i].c2.b ) + gamma * ( pcudaTri[i].c3.b  );
+                  //col.r = 1.0; col.g = 0.0; col.b = 0.0;
+                  //col.r = pcudaTri[i].normal.x;
+                  //col.g = pcudaTri[i].normal.y;
+                  //col.b = pcudaTri[i].normal.z;
+
+                  // Is the depth higher than the current depth?
+                     // Calculate interpolated z
+                     float depth = alpha * (pcudaVector3[pcudaTri[i].v1].z) + beta * ( pcudaVector3[pcudaTri[i].v2].z) + gamma * (  pcudaVector3[pcudaTri[i].v3].z );
+                     if (depth > cuda_pixel_buffer[x*width+y].depth) {
+                        //depth_buffer[x*width+y] = depth;
+						cuda_pixel_buffer[x*width+y].depth = depth;						
+                        //printf("Coloring %d, %d.\n", x, y);
+                        //img.pixel(x,y, col);
+                        // img_buffer[x*width+y] = col;
+
+						cuda_pixel_buffer[x*width+y].r = col.r;
+						cuda_pixel_buffer[x*width+y].g = col.g;
+						cuda_pixel_buffer[x*width+y].b = col.b;
+
+                     }
+               }
+            }
+         }
+
+
+      }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -498,11 +605,11 @@ void CudaRasterizeTriangles(vector<Tri *> & Triangles, vector<Vector3 *> & Verti
 
 
 	//defining the size of the array size
-	int blocksize = ((width*height)/THREADSPERBLOCK);
+	int blocksize = ((Triangles.size())/THREADSPERBLOCK) + ( ((Triangles.size())%THREADSPERBLOCK)==0 ? 0 : 1);
 	printf("Before the Kernel call\n");
 
 	//calling the cuda code
-	cuRaster<<<blocksize, THREADSPERBLOCK>>>(d_cudaTri, d_cudaVector3, d_cuda_pixel_buffer, width, height);
+	cuRaster<<<blocksize, THREADSPERBLOCK>>>(d_cudaTri, d_cudaVector3, d_cuda_pixel_buffer, width, height,Triangles.size() );
 
 	printf("Before the memcpy call\n");
 	//copying th memory back from the kernel 
