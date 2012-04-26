@@ -33,6 +33,9 @@ void drawTri(Tri * t);
 void drawObjects();
 void display();
 
+
+//color_t* img_buffer2 = (color_t*)malloc(sizeof(color_t)*2000*2000);
+
 Vector3 normalize(Vector3 v) {
   double mag = sqrt(v.x*v.x + v.y*v.y + v.z*v.z); 
   if (mag > 0) {
@@ -98,6 +101,13 @@ int in_triangle(double alpha, double gamma, double beta) {
 void RasterizeTriangles(vector<Tri *> & Triangles, vector<Vector3 *> & Vertices, int width, int height) {
 
    color_t* img_buffer = (color_t*)malloc(sizeof(color_t)*width*height);
+
+   for (int i = 0; i < width*height; i++) {
+    img_buffer[i].r = 0.0;
+    img_buffer[i].g = 0.0;
+    img_buffer[i].b = 0.0;
+   }
+
    double* depth_buffer = (double*)malloc(sizeof(double)*width*height);
 
    // Initialize depth_buffer to low number;
@@ -150,20 +160,18 @@ void RasterizeTriangles(vector<Tri *> & Triangles, vector<Vector3 *> & Vertices,
                   // Color
                   color_t col;
                   col.r = alpha * (Triangles[i]->c1.r) + beta * ( Triangles[i]->c2.r ) + gamma * ( Triangles[i]->c3.r  );
+                  if (col.r > 1.0) { col.r = 1.0; }
+                  if (col.g > 1.0) { col.g = 1.0; }
+                  if (col.b > 1.0) { col.b = 1.0; }
                   col.g = alpha * (Triangles[i]->c1.g) + beta * ( Triangles[i]->c2.g ) + gamma * ( Triangles[i]->c3.g  );
                   col.b = alpha * (Triangles[i]->c1.b) + beta * ( Triangles[i]->c2.b ) + gamma * ( Triangles[i]->c3.b  );
-                  //col.r = 1.0; col.g = 0.0; col.b = 0.0;
-                  //col.r = Triangles[i]->normal.x;
-                  //col.g = Triangles[i]->normal.y;
-                  //col.b = Triangles[i]->normal.z;
+
 
                   // Is the depth higher than the current depth?
                      // Calculate interpolated z
                      float depth = alpha * (Vertices[Triangles[i]->v1]->z) + beta * ( Vertices[Triangles[i]->v2]->z) + gamma * (  Vertices[Triangles[i]->v3]->z );
                      if (depth > depth_buffer[x*width+y]) {
                         depth_buffer[x*width+y] = depth;
-                        //printf("Coloring %d, %d.\n", x, y);
-                        //img.pixel(x,y, col);
                         img_buffer[x*width+y] = col;
                      }
                }
@@ -174,6 +182,34 @@ void RasterizeTriangles(vector<Tri *> & Triangles, vector<Vector3 *> & Vertices,
       }
 
    }
+
+  // Calculate statistics
+  /*double r_diff = 0.0;
+  double r_diff2 = 0.0;
+  double g_diff = 0.0;
+  double g_diff2 = 0.0;
+  double b_diff = 0.0;
+  double b_diff2 = 0.0;
+   for (int i = 0; i < (2000*2000); i++) {
+      // Get difference
+      r_diff += img_buffer[i].r;
+      r_diff2 += img_buffer2[i].r;
+      g_diff += img_buffer[i].g;
+      g_diff2 += img_buffer2[i].g;
+      b_diff += img_buffer[i].b;
+      b_diff2 += img_buffer2[i].b;
+   }
+
+   r_diff /= (2000.0*2000);
+   g_diff /= (2000.0*2000);
+   b_diff /= (2000.0*2000);
+   r_diff2 /= (2000.0*2000);
+   g_diff2 /= (2000.0*2000);
+   b_diff2 /= (2000.0*2000);
+   printf("Avg.\n R: %lf G: %lf B: %lf\n", r_diff, g_diff, b_diff);
+   printf("Avg.\n R: %lf G: %lf B: %lf\n", r_diff2, g_diff2, b_diff2);
+   free(img_buffer2);*/
+
 
    for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
@@ -422,24 +458,8 @@ __global__ void cuRaster(cudaTri* pcudaTri, cudaVector3* pcudaVector3, cudaPixel
 
 	int i;
 	//simple test
-/*	if(blockIdx.x == 23 && threadIdx.x ==23){
-		dprintd(blockIdx.x);
-		dprintd(threadIdx.x);
-	  printf("first vertex: %f %f %f \n",pcudaVector3[0].x, pcudaVector3[0].y, pcudaVector3[0].z );
-	  printf("first face: %d %d %d \n", pcudaTri[0].v1,  pcudaTri[0].v2,  pcudaTri[0].v3 ); 
-
-	}
-*/
 	int index;
-	/*for(i=0;i<((width*height)/numTriangles + 1 );i++){
-		index = (numTriangles*i) + (blockIdx.x * THREADSPERBLOCK )+ threadIdx.x;
-		if(index<(width*height)){
-			cuda_pixel_buffer[index].depth = -1000;
-			//printf("x");
-		}
-	}
 
-	__syncthreads();*/
 
 	//bounding the threads
 	int lim = numTriangles/THREADSPERBLOCK  + ((numTriangles % THREADSPERBLOCK )==0 ? 0 :1) ;
@@ -455,10 +475,8 @@ __global__ void cuRaster(cudaTri* pcudaTri, cudaVector3* pcudaVector3, cudaPixel
     else {
 
       for (int row = 0; row < 2; row++) {
-          __syncthreads();
-          pcudaVector3[pcudaTri[i].v1].x = pcudaVector3[pcudaTri[i].v1].x + (100);
-          pcudaVector3[pcudaTri[i].v2].x = pcudaVector3[pcudaTri[i].v2].x + (100);
-          pcudaVector3[pcudaTri[i].v3].x = pcudaVector3[pcudaTri[i].v3].x + (100);
+
+
   
       // Get minimum and maximum x
    		// returns the smaller of 3 numbers (x < y ? (x < z ? x : z) : (z < y ? z : y))
@@ -643,6 +661,23 @@ if (maxy + 1 > width) { maxy = width-1; }
 
 
 
+void transform(cudaVector3* pcudaVert,  int numVertices,int xoffset, int yoffset ) {
+  for (int i = 0; i < numVertices; i++) {
+    pcudaVert[i].x += xoffset;
+    pcudaVert[i].y += yoffset;
+  }
+}
+
+void transformVector(vector<Vector3 *> & Vertices,  int numVertices,int xoffset, int yoffset ) {
+  for (int i = 0; i < Vertices.size(); i++) {
+    Vertices[i]->x += xoffset;
+    Vertices[i]->y += yoffset;
+  }
+}
+
+
+
+
 void CudaRasterizeTriangles(vector<Tri *> & Triangles, vector<Vector3 *> & Vertices, int width, int height){
 
 	//malloc array space for cuda triangle vector
@@ -671,6 +706,7 @@ void CudaRasterizeTriangles(vector<Tri *> & Triangles, vector<Vector3 *> & Verti
   
 
 	color_t* img_buffer = (color_t*)malloc(sizeof(color_t)*width*height);
+
    Image img(width, height);
 
    //cuda pixel buffer, will load into shared memory space
@@ -699,8 +735,7 @@ void CudaRasterizeTriangles(vector<Tri *> & Triangles, vector<Vector3 *> & Verti
 	cudaVector3* d_cudaVector3;
 	cudaMalloc((void**)&d_cudaVector3,Vertices.size()*sizeof(cudaVector3));
 	ERRORCHECK
-	cudaMemcpy( d_cudaVector3, pcudaVector3 ,Vertices.size()*sizeof(cudaVector3) ,cudaMemcpyHostToDevice ); 
-	ERRORCHECK
+
 
 
 	//defining the size of the array size
@@ -708,9 +743,23 @@ void CudaRasterizeTriangles(vector<Tri *> & Triangles, vector<Vector3 *> & Verti
 	printf("Before the Kernel call\n");
 dprintd(blocksize);
 dprintd(THREADSPERBLOCK);
-	//calling the cuda code
-	cuRaster<<<blocksize, THREADSPERBLOCK>>>(d_cudaTri, d_cudaVector3, d_cuda_pixel_buffer, width, height,Triangles.size() );
-    ERRORCHECK
+  for (int row = 0; row < 5; row++) {
+    for (int col = 0; col < 5; col++) {
+        cudaMemcpy( d_cudaVector3, pcudaVector3 ,Vertices.size()*sizeof(cudaVector3) ,cudaMemcpyHostToDevice ); 
+        ERRORCHECK
+
+        //calling the cuda code
+        cuRaster<<<blocksize, THREADSPERBLOCK>>>(d_cudaTri, d_cudaVector3, d_cuda_pixel_buffer, width, height,Triangles.size() );
+          ERRORCHECK
+
+        // Move to next slot
+        transform(pcudaVector3, Vertices.size(),0,-440);
+    }
+    transform(pcudaVector3, Vertices.size(), 420, 2200);
+  }
+
+
+
 	printf("Before the memcpy call\n");
 	//copying th memory back from the kernel 
     cudaMemcpy(cuda_pixel_buffer, d_cuda_pixel_buffer, width*height*sizeof(cudaPixel),cudaMemcpyDeviceToHost);
@@ -735,11 +784,12 @@ ERRORCHECK
 //copy cuda_pixles to buffer 
    for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
-		index = x*width+y;
-		col.r = cuda_pixel_buffer[index].r;
-		col.g = cuda_pixel_buffer[index].g;
-		col.b = cuda_pixel_buffer[index].b;
-		img_buffer[index] = col;
+  		index = x*width+y;
+  		col.r = cuda_pixel_buffer[index].r;
+  		col.g = cuda_pixel_buffer[index].g;
+  		col.b = cuda_pixel_buffer[index].b;
+  		img_buffer[index] = col;
+      //img_buffer2[index] = col;
         img.pixel(x,y, img_buffer[x*width+y]);
       }
    }
@@ -769,167 +819,17 @@ int main( int argc, char** argv ) {
     //printFirstThree();
     ColorVertices1(Triangles, Vertices);
     printf("Done Coloring...\n"); 
-    Convert_to_Window(Vertices, 2000, 2000, 4, -750, 500);
+    Convert_to_Window(Vertices, 2000, 2000, 3, -750, 500);
 		
     //RasterizeTriangles(Triangles, Vertices, 2000, 2000);
     
   	//cuda version of rasterize triangle
     CudaRasterizeTriangles(Triangles, Vertices, 2000, 2000);
-  
  
   }
   return 0;
 }
 
-//drawing routine to draw triangles as wireframe
-/*void drawTria(Tri* t) {
-  if(display_mode == 0) {
-    glBegin(GL_LINE_LOOP);
-    glColor3f(0.0, 0.0, 0.5);
-    //note that the vertices are indexed starting at 0, but the triangles
-    //index them starting from 1, so we must offset by -1!!!
-    glVertex3f(Vertices[t->v1 - 1]->x, 
-      Vertices[t->v1 - 1]->y,
-      Vertices[t->v1 - 1]->z);
-    glVertex3f(Vertices[t->v2 - 1]->x, 
-      Vertices[t->v2 - 1]->y,
-      Vertices[t->v2 - 1]->z);
-    glVertex3f(Vertices[t->v3 - 1]->x, 
-      Vertices[t->v3 - 1]->y,
-      Vertices[t->v3 - 1]->z);
-    glEnd();
-  }
-}
 
-void drawSphere() {
-  glColor3f(1.0, 0.0, 0.0);
-  glutWireSphere(0.35, 10, 10);
-}
-
-//debugging routine which just draws the vertices of the mesh
-void DrawAllVerts() {
-  
-  glColor3f(1.0, 0.0, 1.0);
-  glBegin(GL_POINTS);
-  for (unsigned int k=0; k < Vertices.size(); k++) {
-    glVertex3f(Vertices[k]->x, Vertices[k]->y, Vertices[k]->z);
-  }
-  glEnd();
-  
-}
-
-void reshape(int w, int h) {
-  GW = w;
-  GH = h;
-  
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-  if (view_mode == 0)
-    glOrtho( -2.0*(float)w/h, 2.0*(float)w/h, -2.0, 2.0, 1.0, 15.0);
-  //else... fill in
-  glMatrixMode(GL_MODELVIEW);
-  glViewport(0, 0, w, h);
-  
-  glutPostRedisplay();
-}
-
-void drawObjects() {
-  
-  //transforms for the mesh
-  glPushMatrix();
-  //leave these transformations in as they center and scale each mesh correctly
-  //scale object to window
-  glScalef(1.0/(float)max_extent, 1.0/(float)max_extent, 1.0/(float)max_extent);
-  //translate the object to the orgin
-  glTranslatef(-(center.x), -(center.y), -(center.z));
-  //draw the wireframe mesh
-  for(unsigned int j = 0; j < Triangles.size(); j++) {
-    drawTria(Triangles[j]);
-  }
-  glPopMatrix();
-  
-  //transforms for the sphere
-  glPushMatrix();
-  //draw the glut sphere behind the mesh
-  glTranslatef(1.25, 0.0, -2.0);
-  drawSphere();
-  glPopMatrix();
-}
-
-void display() {
-  
-  float numV = Vertices.size();
-  
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  
-  glMatrixMode(GL_MODELVIEW);
-    
-  glPushMatrix();
-  //set up the camera
-  gluLookAt(0, 0, 3.0, 0, 0, 0, 0, 1, 0);
-    
-  drawObjects();
-
-  glPopMatrix();
-    
-  glutSwapBuffers();
-    
-}
-
-
-
-int main( int argc, char** argv ) {
-  
-  //set up my window
-  glutInit(&argc, argv);
-  glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
-  glutInitWindowSize(300, 300); 
-  glutInitWindowPosition(100, 100);
-  glutCreateWindow("Mesh display");
-  glClearColor(1.0, 1.0, 1.0, 1.0);
-  
-  //register glut callback functions
-  glutDisplayFunc( display );
-  glutReshapeFunc( reshape );
-  //enable z-buffer
-  glEnable(GL_DEPTH_TEST);
-  
-  //initialization
-  max_x = max_y = max_z = FLT_MIN;
-  min_x = min_y = min_z = FLT_MAX;
-  center.x = 0;
-  center.y = 0;
-  center.z = 0;
-  display_mode = 0;
-  max_extent = 1.0;
-  view_mode = 0;
-  
-  //make sure a file to read is specified
-  if (argc > 1) {
-    cout << "file " << argv[1] << endl;
-    //read-in the mesh file specified
-    ReadFile(argv[1]);
-    //only for debugging
-    if (Vertices.size() > 4)
-      printFirstThree();
-    
-    //once the file is parsed find out the maximum extent to center and scale mesh
-    max_extent = max_x - min_x;
-    if (max_y - min_y > max_extent) max_extent = max_y - min_y;
-    //cout << "max_extent " << max_extent << " max_x " << max_x << " min_x " << min_x << endl;
-    //cout << "max_y " << max_y << " min_y " << min_y << " max_z " << max_z << " min_z " << min_z << endl;
-    
-    center.x = center.x/Vertices.size();
-    center.y = center.y/Vertices.size();
-    center.z = center.z/Vertices.size();
-    //cout << "center " << center.x << " " << center.y << " " << center.z << endl;
-    //cout << "scale by " << 1.0/(float)max_extent << endl;
-  } else {
-    cout << "format is: meshparser filename" << endl;
-  }
-
-  
-  glutMainLoop();
-}*/
 
 
