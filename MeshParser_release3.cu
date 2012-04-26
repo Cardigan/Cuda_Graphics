@@ -417,30 +417,29 @@ void printFirstThree() {
 __global__ void cuRaster(cudaTri* pcudaTri, cudaVector3* pcudaVector3, cudaPixel * cuda_pixel_buffer,int width, int height){
 
 	int index;
-//simple test
-if(blockIdx.x == 0 && threadIdx.x ==0){
-  printf("first vertex: %f %f %f \n",pcudaVector3[0].x, pcudaVector3[0].y, pcudaVector3[0].z );
-  printf("first face: %d %d %d \n", pcudaTri[0].v1,  pcudaTri[0].v2,  pcudaTri[0].v3 ); 
+	//simple test
+/*	if(blockIdx.x == 0 && threadIdx.x ==0){
+	  printf("first vertex: %f %f %f \n",pcudaVector3[0].x, pcudaVector3[0].y, pcudaVector3[0].z );
+	  printf("first face: %d %d %d \n", pcudaTri[0].v1,  pcudaTri[0].v2,  pcudaTri[0].v3 ); 
 
-}
+	}*/
 
 
 	//bounding the threads
 	int lim = ((width*height)/THREADSPERBLOCK);
 	if(blockIdx.x < lim){
 		if((threadIdx.x) < (THREADSPERBLOCK)){
-
-				index = blockIdx.x*THREADSPERBLOCK + threadIdx.x;
+			index = blockIdx.x*THREADSPERBLOCK + threadIdx.x;
 			//magical stuff will happens here
-			if(index%500 == 0){
-				
+			
 
-				index = blockIdx.x*THREADSPERBLOCK + threadIdx.x;
-				cuda_pixel_buffer[index].r = 0;
-				
-				cuda_pixel_buffer[index].b = 1;
-				cuda_pixel_buffer[index].g = 0;
-				}
+
+
+
+
+
+
+
 		}
 	}
 }
@@ -450,11 +449,6 @@ if(blockIdx.x == 0 && threadIdx.x ==0){
 
 void CudaRasterizeTriangles(vector<Tri *> & Triangles, vector<Vector3 *> & Vertices, int width, int height){
 
-
-
-	 printFirstThree();
-
- 
 	//malloc array space for cuda triangle vector
 	cudaTri* pcudaTri = (cudaTri*)malloc(Triangles.size()*sizeof(cudaTri));
 	//mallocing space for vertices array
