@@ -1,6 +1,12 @@
 Roeurn Tourn
 Jan Lorenz Soliman
 
+
+Compile: 'make all'
+
+Run: './rasterize [filename]'
+Creates a 2000 x 2000 image with 25 bunnies.
+
 We ran our code on 255x12. For some reason it would not run on all machines. 
 The final picture from the GPU had a few specs because we did not implement
 mutexes.
