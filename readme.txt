@@ -1,7 +1,9 @@
 Roeurn Tourn
 Jan Lorenz Soliman
 
-We ran our code on 255x12. For some reason it would not run on all machines.
+We ran our code on 255x12. For some reason it would not run on all machines. 
+The final picture from the GPU had a few specs because we did not implement
+mutexes.
 
 Time CPU (1 bunny):
   Time rasterizing triangles
