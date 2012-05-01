@@ -743,20 +743,23 @@ void CudaRasterizeTriangles(vector<Tri *> & Triangles, vector<Vector3 *> & Verti
 	printf("Before the Kernel call\n");
 dprintd(blocksize);
 dprintd(THREADSPERBLOCK);
-  for (int row = 0; row < 5; row++) {
-    for (int col = 0; col < 5; col++) {
+  //for (int row = 0; row < 5; row++) {
+    //for (int col = 0; col < 5; col++) {
+        transform(pcudaVector3, Vertices.size(), 400, -800);
         cudaMemcpy( d_cudaVector3, pcudaVector3 ,Vertices.size()*sizeof(cudaVector3) ,cudaMemcpyHostToDevice ); 
         ERRORCHECK
+
+
 
         //calling the cuda code
         cuRaster<<<blocksize, THREADSPERBLOCK>>>(d_cudaTri, d_cudaVector3, d_cuda_pixel_buffer, width, height,Triangles.size() );
           ERRORCHECK
 
         // Move to next slot
-        transform(pcudaVector3, Vertices.size(),0,-440);
-    }
-    transform(pcudaVector3, Vertices.size(), 420, 2200);
-  }
+        //transform(pcudaVector3, Vertices.size(),0,-440);
+    //}
+    //transform(pcudaVector3, Vertices.size(), 420, 2200);
+  //}
 
 
 
@@ -770,17 +773,75 @@ ERRORCHECK
 	color_t col;
 	int index=0;
 	col.r = 1; col.g = 0; col.b=0;
-   /* for(i = 0; i<width; i++){                     // this area was combined into the next for loop
-   		for(int j=0; j<height;j++){
-			index = i*width+j;
-			col.r = cuda_pixel_buffer[index].r;
-			col.g = cuda_pixel_buffer[index].g;
-			col.b = cuda_pixel_buffer[index].b;
-			img_buffer[index] = col;
-		}
-   }*/
+ 
    
 	printf("done copying from the cudabuffer\n");
+
+  float weight[5] = { 0.9, 0.1945945946, 0.1216216216, 0.0540540541, 0.0162162162 };
+
+
+  // RUN the GAUSSIAN BLUR 100 times.
+  for (int i = 0; i < 100; i++) {
+      
+      // Horizontal blur
+       for (int y = 0; y < height; y++) {
+          for (int x = 0; x < width; x++) {
+             index = x*width+y;
+             int adds = 0;
+             // Loop through five times
+             for (int z = 0; z < 3; z++) {
+                 if (y + z < width) {
+                    cuda_pixel_buffer[index].r += cuda_pixel_buffer[index+z].r;
+                    cuda_pixel_buffer[index].g += cuda_pixel_buffer[index+z].g;
+                    cuda_pixel_buffer[index].b += cuda_pixel_buffer[index+z].b;
+                    adds++;
+                 }
+                 if (y - z > 0) {
+                    cuda_pixel_buffer[index].r += cuda_pixel_buffer[index-z].r;
+                    cuda_pixel_buffer[index].g += cuda_pixel_buffer[index-z].g;
+                    cuda_pixel_buffer[index].b += cuda_pixel_buffer[index-z].b;
+                    adds++;
+                 }
+             }
+             cuda_pixel_buffer[index].r /= adds;
+             cuda_pixel_buffer[index].g /= adds;
+             cuda_pixel_buffer[index].b /= adds;
+          }
+       }
+
+       // Verticle blur
+       for (int y = 0; y < height; y++) {
+          for (int x = 0; x < width; x++) {
+             index = x*width+y;
+             int adds = 0;
+             //cuda_pixel_buffer[index].r *= weight[0];
+             //cuda_pixel_buffer[index].g *= weight[0];
+             //cuda_pixel_buffer[index].b *= weight[0];
+             // Loop through five times
+             for (int z = 0; z < 2; z++) {
+                 if (x + z < width) {
+                    cuda_pixel_buffer[index].r += cuda_pixel_buffer[(x+z)*width+y].r ;
+                    cuda_pixel_buffer[index].g += cuda_pixel_buffer[(x+z)*width+y].g ;
+                    cuda_pixel_buffer[index].b += cuda_pixel_buffer[(x+z)*width+y].b ;
+                    adds++;
+                 }
+                 if (x - z > 0) {
+                    cuda_pixel_buffer[index].r += cuda_pixel_buffer[(x-z)*width+y].r  ;
+                    cuda_pixel_buffer[index].g += cuda_pixel_buffer[(x-z)*width+y].g  ;
+                    cuda_pixel_buffer[index].b += cuda_pixel_buffer[(x-z)*width+y].b  ;
+                    adds++;
+                 }
+             }
+             cuda_pixel_buffer[index].r /= adds;
+             cuda_pixel_buffer[index].g /= adds;
+             cuda_pixel_buffer[index].b /= adds;
+
+
+          }
+       }
+
+  }
+
 //copy cuda_pixles to buffer 
    for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
@@ -789,8 +850,10 @@ ERRORCHECK
   		col.g = cuda_pixel_buffer[index].g;
   		col.b = cuda_pixel_buffer[index].b;
   		img_buffer[index] = col;
-      //img_buffer2[index] = col;
+
         img.pixel(x,y, img_buffer[x*width+y]);
+
+
       }
    }
 
