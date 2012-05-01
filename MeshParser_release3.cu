@@ -360,7 +360,8 @@ void readStream(istream& is)
 //process each line of input save vertices and faces appropriately
 void readLine(char* str) {
   
-  int indx = 0, vi;
+  //int indx = 0;
+  int vi;
   float x, y, z;
   float r, g, b;
   int mat;
@@ -458,7 +459,7 @@ __global__ void cuRaster(cudaTri* pcudaTri, cudaVector3* pcudaVector3, cudaPixel
 
 	int i;
 	//simple test
-	int index;
+	//int index;
 
 
 	//bounding the threads
