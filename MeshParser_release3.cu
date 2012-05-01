@@ -460,6 +460,8 @@ __global__ void cuBlur(cudaPixel * cuda_pixel_buffer,int width, int height){
 	//int lim = width * height;
 	int y = (blockIdx.x*THREADSPERBLOCK + threadIdx.x) / width ;
 	int x = (blockIdx.x*THREADSPERBLOCK + threadIdx.x) - y ;
+
+//if(y==100 && threadIdx.x==0)printf("y=%d, x=%x\n",y, x);
 	
 	//main if statment to test if the thread is range
 	if(index < (width*height)){
@@ -483,6 +485,12 @@ __global__ void cuBlur(cudaPixel * cuda_pixel_buffer,int width, int height){
              cuda_pixel_buffer[index].r /= adds;
              cuda_pixel_buffer[index].g /= adds;
              cuda_pixel_buffer[index].b /= adds;
+
+
+
+
+
+
 
 		}//end loop 100 times
 	}
@@ -791,6 +799,10 @@ dprintd(THREADSPERBLOCK);
         ERRORCHECK
 
 
+		blocksize = (width*height)/THREADSPERBLOCK;
+		printf("\nabout to call cuBlur ");
+		dprintd(blocksize);
+		dprintd(THREADSPERBLOCK);
 
         //calling the cuda code
         cuRaster<<<blocksize, THREADSPERBLOCK>>>(d_cudaTri, d_cudaVector3, d_cuda_pixel_buffer, width, height,Triangles.size() );
@@ -853,7 +865,7 @@ ERRORCHECK
              cuda_pixel_buffer[index].g /= adds;
              cuda_pixel_buffer[index].b /= adds;
           }
-       }
+       }//end of h blur
 
        // Verticle blur
        for (int y = 0; y < height; y++) {
@@ -884,7 +896,7 @@ ERRORCHECK
 
 
           }
-       }
+       }//end of vert blur
 
   }//end of serial blur
 */
