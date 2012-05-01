@@ -217,7 +217,7 @@ void RasterizeTriangles(vector<Tri *> & Triangles, vector<Vector3 *> & Vertices,
       }
    }
 
-   img.WriteTga("awesome.tga", true);
+   img.WriteTga("awesome.tga", false);
    free(img_buffer);
    free(depth_buffer);
 }
@@ -463,39 +463,65 @@ __global__ void cuBlur(cudaPixel * cuda_pixel_buffer,int width, int height){
 
   int x = index / width;
   int y = index % height;
-
-  if (x > 1000) {cuda_pixel_buffer[x*width+y].r = 1.0;}
-  if (y > 1000) {cuda_pixel_buffer[x*width+y].b = 1.0;}
-
-  return;
-
-//if(y==100 && threadIdx.x==0)printf("y=%d, x=%x\n",y, x);
 	
 	//main if statment to test if the thread is range
 	if(index < (width*height)){
 
-		for(int i=0;i<1;i++){
-             float adds = 0;
+		for(int i=0;i<100;i++){
+             float adds = 1;
+             cudaPixel tmp;
              // Loop through five times
-             for (int z = 0; z < 3; z++) {
-                 if (y + z < width ) {
-                    //cuda_pixel_buffer[x*width+y].r += 1.0;
-                    //cuda_pixel_buffer[index].r += cuda_pixel_buffer[index+z].r;
-                    //cuda_pixel_buffer[index].g += cuda_pixel_buffer[index+z].g;
-                    //cuda_pixel_buffer[index].b += cuda_pixel_buffer[index+z].b;
+             for (int z = 0; z < 6; z++) {
+                 if (y + z < height ) {
+                    tmp.r += cuda_pixel_buffer[index+z].r;
+                    tmp.g += cuda_pixel_buffer[index+z].g;
+                    tmp.b += cuda_pixel_buffer[index+z].b;
+
                     adds += 1.0;
                  }
                  if (y - z > 0) {
-                    //cuda_pixel_buffer[index].r += cuda_pixel_buffer[index-z].r;
-                    //cuda_pixel_buffer[index].g += cuda_pixel_buffer[index-z].g;
-                    //cuda_pixel_buffer[index].b += cuda_pixel_buffer[index-z].b;
+                    tmp.r += cuda_pixel_buffer[index-z].r;
+                    tmp.g += cuda_pixel_buffer[index-z].g;
+                    tmp.b += cuda_pixel_buffer[index-z].b;
                     adds += 1.0;
                  }
              }
              //printf("Red is %f.\n", cuda_pixel_buffer[index].r);
-             //cuda_pixel_buffer[index].r /= adds;
-             //cuda_pixel_buffer[index].g /= adds;
-             //cuda_pixel_buffer[index].b /= adds;
+             tmp.r /= adds;
+             tmp.g /= adds;
+             tmp.b /= adds;
+
+             __syncthreads();
+             cuda_pixel_buffer[index] = tmp;
+             
+             tmp.r = 0.0;
+             tmp.g = 0.0;
+             tmp.b = 0.0;
+
+             adds = 0;
+
+             // Loop through five times
+             for (int z = 0; z < 6; z++) {
+                 if (x + z < width) {
+                    tmp.r += cuda_pixel_buffer[(x+z)*width+y].r ;
+                    tmp.g += cuda_pixel_buffer[(x+z)*width+y].g ;
+                    tmp.b += cuda_pixel_buffer[(x+z)*width+y].b ;
+                    adds++;
+                 }
+                 if (x - z > 0) {
+                    tmp.r += cuda_pixel_buffer[(x-z)*width+y].r  ;
+                    tmp.g += cuda_pixel_buffer[(x-z)*width+y].g  ;
+                    tmp.b += cuda_pixel_buffer[(x-z)*width+y].b  ;
+                    adds++;
+                 }
+             }
+             tmp.r /= adds;
+             tmp.g /= adds;
+             tmp.b /= adds;
+
+
+             __syncthreads();
+             cuda_pixel_buffer[index] = tmp;
 
 		}//end loop 100 times
 	}
@@ -922,7 +948,7 @@ ERRORCHECK
       }
    }
 
-   img.WriteTga("awesome.tga", true);
+   img.WriteTga("awesome.tga", false);
    free(img_buffer);
 	free(pcudaVector3);
 	free(pcudaTri);
@@ -947,7 +973,7 @@ int main( int argc, char** argv ) {
     //printFirstThree();
     ColorVertices1(Triangles, Vertices);
     printf("Done Coloring...\n"); 
-    Convert_to_Window(Vertices, 2000, 2000, 3, -750, 500);
+    Convert_to_Window(Vertices, 2000, 2000, 6, -600, 500);
 		
     //RasterizeTriangles(Triangles, Vertices, 2000, 2000);
     
