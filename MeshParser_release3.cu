@@ -450,7 +450,47 @@ void printFirstThree() {
 }
 
 
-//cuda fucntion call
+
+//bluring cuda fucntion call
+__global__ void cuBlur(cudaPixel * cuda_pixel_buffer,int width, int height){
+	
+	float weight[5] = { 0.9, 0.1945945946, 0.1216216216, 0.0540540541, 0.0162162162 };
+	
+	int index =  (blockIdx.x*THREADSPERBLOCK + threadIdx.x);
+	//int lim = width * height;
+	int y = (blockIdx.x*THREADSPERBLOCK + threadIdx.x) / width ;
+	int x = (blockIdx.x*THREADSPERBLOCK + threadIdx.x) - y ;
+	
+	//main if statment to test if the thread is range
+	if(index < (width*height)){
+		for(int i=0;i<100;i++){
+             int adds = 0;
+             // Loop through five times
+             for (int z = 0; z < 3; z++) {
+                 if (y + z < width) {
+                    cuda_pixel_buffer[index].r += cuda_pixel_buffer[index+z].r;
+                    cuda_pixel_buffer[index].g += cuda_pixel_buffer[index+z].g;
+                    cuda_pixel_buffer[index].b += cuda_pixel_buffer[index+z].b;
+                    adds++;
+                 }
+                 if (y - z > 0) {
+                    cuda_pixel_buffer[index].r += cuda_pixel_buffer[index-z].r;
+                    cuda_pixel_buffer[index].g += cuda_pixel_buffer[index-z].g;
+                    cuda_pixel_buffer[index].b += cuda_pixel_buffer[index-z].b;
+                    adds++;
+                 }
+             }
+             cuda_pixel_buffer[index].r /= adds;
+             cuda_pixel_buffer[index].g /= adds;
+             cuda_pixel_buffer[index].b /= adds;
+
+		}//end loop 100 times
+	}
+
+}
+
+
+//main cuda fucntion call
 __global__ void cuRaster(cudaTri* pcudaTri, cudaVector3* pcudaVector3, cudaPixel * cuda_pixel_buffer,int width, int height, int numTriangles){
 
 
@@ -762,6 +802,10 @@ dprintd(THREADSPERBLOCK);
     //transform(pcudaVector3, Vertices.size(), 420, 2200);
   //}
 
+	//calling the cuda bluring 
+	printf("Before the bluring call\n");
+    cuBlur<<<blocksize, THREADSPERBLOCK>>>( d_cuda_pixel_buffer, width, height );
+	ERRORCHECK
 
 
 	printf("Before the memcpy call\n");
@@ -780,7 +824,8 @@ ERRORCHECK
 
   float weight[5] = { 0.9, 0.1945945946, 0.1216216216, 0.0540540541, 0.0162162162 };
 
-
+  //serial version of blur
+  /*	
   // RUN the GAUSSIAN BLUR 100 times.
   for (int i = 0; i < 100; i++) {
       
@@ -841,7 +886,9 @@ ERRORCHECK
           }
        }
 
-  }
+  }//end of serial blur
+*/
+
 
 //copy cuda_pixles to buffer 
    for (int y = 0; y < height; y++) {
