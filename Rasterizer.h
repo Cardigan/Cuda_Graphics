@@ -22,7 +22,7 @@ using namespace std;
 //used for cuda variation and fpixel
 #define INUSE 1
 #define NOT_INUSE 0
-#define THREADSPERBLOCK 1024
+#define THREADSPERBLOCK 512
 
 // ========================
 // = debuging expressions =
