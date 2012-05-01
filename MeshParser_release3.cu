@@ -458,39 +458,44 @@ __global__ void cuBlur(cudaPixel * cuda_pixel_buffer,int width, int height){
 	
 	int index =  (blockIdx.x*THREADSPERBLOCK + threadIdx.x);
 	//int lim = width * height;
-	int y = (blockIdx.x*THREADSPERBLOCK + threadIdx.x) / width ;
-	int x = (blockIdx.x*THREADSPERBLOCK + threadIdx.x) - y ;
+	//int y = (blockIdx.x*THREADSPERBLOCK + threadIdx.x) / width ;
+	//int x = (blockIdx.x*THREADSPERBLOCK + threadIdx.x) - y ;
+
+  int x = index / width;
+  int y = index % height;
+
+  if (x > 1000) {cuda_pixel_buffer[x*width+y].r = 1.0;}
+  if (y > 1000) {cuda_pixel_buffer[x*width+y].b = 1.0;}
+
+  return;
 
 //if(y==100 && threadIdx.x==0)printf("y=%d, x=%x\n",y, x);
 	
 	//main if statment to test if the thread is range
 	if(index < (width*height)){
-		for(int i=0;i<100;i++){
-             int adds = 0;
+
+		for(int i=0;i<1;i++){
+             float adds = 0;
              // Loop through five times
              for (int z = 0; z < 3; z++) {
-                 if (y + z < width) {
-                    cuda_pixel_buffer[index].r += cuda_pixel_buffer[index+z].r;
-                    cuda_pixel_buffer[index].g += cuda_pixel_buffer[index+z].g;
-                    cuda_pixel_buffer[index].b += cuda_pixel_buffer[index+z].b;
-                    adds++;
+                 if (y + z < width ) {
+                    //cuda_pixel_buffer[x*width+y].r += 1.0;
+                    //cuda_pixel_buffer[index].r += cuda_pixel_buffer[index+z].r;
+                    //cuda_pixel_buffer[index].g += cuda_pixel_buffer[index+z].g;
+                    //cuda_pixel_buffer[index].b += cuda_pixel_buffer[index+z].b;
+                    adds += 1.0;
                  }
                  if (y - z > 0) {
-                    cuda_pixel_buffer[index].r += cuda_pixel_buffer[index-z].r;
-                    cuda_pixel_buffer[index].g += cuda_pixel_buffer[index-z].g;
-                    cuda_pixel_buffer[index].b += cuda_pixel_buffer[index-z].b;
-                    adds++;
+                    //cuda_pixel_buffer[index].r += cuda_pixel_buffer[index-z].r;
+                    //cuda_pixel_buffer[index].g += cuda_pixel_buffer[index-z].g;
+                    //cuda_pixel_buffer[index].b += cuda_pixel_buffer[index-z].b;
+                    adds += 1.0;
                  }
              }
-             cuda_pixel_buffer[index].r /= adds;
-             cuda_pixel_buffer[index].g /= adds;
-             cuda_pixel_buffer[index].b /= adds;
-
-
-
-
-
-
+             //printf("Red is %f.\n", cuda_pixel_buffer[index].r);
+             //cuda_pixel_buffer[index].r /= adds;
+             //cuda_pixel_buffer[index].g /= adds;
+             //cuda_pixel_buffer[index].b /= adds;
 
 		}//end loop 100 times
 	}
