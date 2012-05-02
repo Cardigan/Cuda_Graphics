@@ -454,7 +454,7 @@ void printFirstThree() {
 //bluring cuda fucntion call
 __global__ void cuBlur(cudaPixel * cuda_pixel_buffer,int width, int height){
 	
-	float weight[5] = { 0.9, 0.1945945946, 0.1216216216, 0.0540540541, 0.0162162162 };
+	//float weight[5] = { 0.9, 0.1945945946, 0.1216216216, 0.0540540541, 0.0162162162 };
 	
 	int index =  (blockIdx.x*THREADSPERBLOCK + threadIdx.x);
 	//int lim = width * height;
@@ -470,8 +470,12 @@ __global__ void cuBlur(cudaPixel * cuda_pixel_buffer,int width, int height){
 		for(int i=0;i<100;i++){
              float adds = 1;
              cudaPixel tmp;
+			 tmp.r = 0.0;
+             tmp.g = 0.0;
+             tmp.b = 0.0;
              // Loop through five times
-             for (int z = 0; z < 6; z++) {
+ 
+             for (int z = 0; z < 20; z+=2) {
                  if (y + z < height ) {
                     tmp.r += cuda_pixel_buffer[index+z].r;
                     tmp.g += cuda_pixel_buffer[index+z].g;
@@ -498,10 +502,10 @@ __global__ void cuBlur(cudaPixel * cuda_pixel_buffer,int width, int height){
              tmp.g = 0.0;
              tmp.b = 0.0;
 
-             adds = 0;
+             adds = 0.0;
 
              // Loop through five times
-             for (int z = 0; z < 6; z++) {
+             for (int z = 0; z < 20; z+=2) {
                  if (x + z < width) {
                     tmp.r += cuda_pixel_buffer[(x+z)*width+y].r ;
                     tmp.g += cuda_pixel_buffer[(x+z)*width+y].g ;
@@ -839,19 +843,37 @@ dprintd(THREADSPERBLOCK);
         cuRaster<<<blocksize, THREADSPERBLOCK>>>(d_cudaTri, d_cudaVector3, d_cuda_pixel_buffer, width, height,Triangles.size() );
           ERRORCHECK
 
-        // Move to next slot
-        //transform(pcudaVector3, Vertices.size(),0,-440);
-    //}
-    //transform(pcudaVector3, Vertices.size(), 420, 2200);
-  //}
 
 	//calling the cuda bluring 
-	printf("Before the bluring call\n");
+	printf("\nBefore the bluring call\n");
     cuBlur<<<blocksize, THREADSPERBLOCK>>>( d_cuda_pixel_buffer, width, height );
 	ERRORCHECK
 
 
-	printf("Before the memcpy call\n");
+
+		printf("Making the second bunny\n");
+        transform(pcudaVector3, Vertices.size(), 400, -600);
+        cudaMemcpy( d_cudaVector3, pcudaVector3 ,Vertices.size()*sizeof(cudaVector3) ,cudaMemcpyHostToDevice ); 
+        ERRORCHECK
+
+		blocksize = (width*height)/THREADSPERBLOCK;
+        //calling the cuda code
+        cuRaster<<<blocksize, THREADSPERBLOCK>>>(d_cudaTri, d_cudaVector3, d_cuda_pixel_buffer, width, height,Triangles.size() );
+          ERRORCHECK
+
+
+
+
+
+
+
+
+
+
+
+
+
+	printf("About to the memcpy call\n");
 	//copying th memory back from the kernel 
     cudaMemcpy(cuda_pixel_buffer, d_cuda_pixel_buffer, width*height*sizeof(cudaPixel),cudaMemcpyDeviceToHost);
 ERRORCHECK	
@@ -865,7 +887,7 @@ ERRORCHECK
    
 	printf("done copying from the cudabuffer\n");
 
-  float weight[5] = { 0.9, 0.1945945946, 0.1216216216, 0.0540540541, 0.0162162162 };
+ // float weight[5] = { 0.9, 0.1945945946, 0.1216216216, 0.0540540541, 0.0162162162 };
 
   //serial version of blur
   /*	
